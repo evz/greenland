@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fair Trade Options for Greenland</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="mobile-tabs">
+            <button class="tab active" data-view="list">List</button>
+            <button class="tab" data-view="map">Map</button>
+        </div>
+        <div id="sidebar">
+            <header>
+                <h1>Fair Trade Options for Greenland</h1>
+                <p class="subtitle">Helpful suggestions for EU negotiators seeking equivalent land swaps</p>
+            </header>
+
+            <div id="info-box">
+                <div class="stat">
+                    <span class="label">Greenland Area:</span>
+                    <span class="value" id="greenland-area">2,166,086 km&sup2;</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Combinations Found:</span>
+                    <span class="value" id="combo-count">Loading...</span>
+                </div>
+                <p class="callout">All combinations are exact matches within 10 km&sup2; of Greenland's area</p>
+            </div>
+
+            <div id="search-box">
+                <input type="text" id="state-search" placeholder="Search by state name...">
+                <button id="clear-search" title="Clear search">&times;</button>
+            </div>
+
+            <div id="selected-info" class="hidden">
+                <h3>Selected Combination</h3>
+                <div id="selected-states"></div>
+                <div id="selected-area"></div>
+                <button id="clear-selection">Clear Selection</button>
+            </div>
+
+            <div id="combination-list">
+                <div class="list-header">
+                    <span>Click a combination to highlight on map</span>
+                </div>
+                <div id="combinations">
+                    <div id="loading">Loading combinations...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+</body>
+</html>
