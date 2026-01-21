@@ -4,7 +4,9 @@ let statesLayer;
 let statesGeoJSON;
 let combinationsData;
 let selectedComboIndex = null;
-let searchFilter = '';
+let selectedStates = []; // Multi-select filter
+let allStateNames = []; // For typeahead
+let highlightedIndex = -1;
 
 // State layer styles
 const defaultStyle = {
@@ -91,6 +93,9 @@ function renderStates() {
                name !== 'Puerto Rico' && name !== 'District of Columbia';
     });
 
+    // Populate state names for typeahead
+    allStateNames = lower48.map(f => f.properties.name).sort();
+
     statesLayer = L.geoJSON({ type: 'FeatureCollection', features: lower48 }, {
         style: defaultStyle,
         onEachFeature: (feature, layer) => {
@@ -139,42 +144,38 @@ function handleStateOut(e) {
     layer.setStyle(defaultStyle);
 }
 
-// Handle state click - filter combinations containing this state
+// Handle state click - add state to filter
 function handleStateClick(e) {
     const stateName = e.target.feature.properties.name;
-    document.getElementById('state-search').value = stateName;
-    searchFilter = stateName.toLowerCase();
-    renderCombinations();
+    addStateFilter(stateName);
 }
 
-// Render combinations list with virtual scrolling
+// Render combinations list
 function renderCombinations() {
     const container = document.getElementById('combinations');
     container.innerHTML = '';
 
-    const filtered = combinationsData.combinations.filter((combo, idx) => {
-        if (!searchFilter) return true;
-        return combo.states.some(s => s.toLowerCase().includes(searchFilter));
+    const filtered = combinationsData.combinations.filter((combo) => {
+        if (selectedStates.length === 0) return true;
+        // Combination must include ALL selected states
+        return selectedStates.every(state => combo.states.includes(state));
     });
 
-    // Virtual scrolling: only render visible items
-    const itemHeight = 100; // approximate height of each item
-    const containerHeight = container.parentElement.clientHeight - 50;
-    const visibleCount = Math.ceil(containerHeight / itemHeight) + 5;
-
-    // For now, render all filtered items (with reasonable limit)
+    // Render filtered items (with reasonable limit)
     const toRender = filtered.slice(0, Math.min(filtered.length, 500));
 
-    toRender.forEach((combo, idx) => {
+    toRender.forEach((combo) => {
         const originalIdx = combinationsData.combinations.indexOf(combo);
         const item = createComboItem(combo, originalIdx);
         container.appendChild(item);
     });
 
     // Update header with count
+    const filterText = selectedStates.length > 0
+        ? ` containing ${selectedStates.join(', ')}`
+        : '';
     document.querySelector('.list-header span').textContent =
-        `${filtered.length.toLocaleString()} combinations` +
-        (searchFilter ? ` matching "${searchFilter}"` : '');
+        `${filtered.length.toLocaleString()} combinations${filterText}`;
 }
 
 // Create a combination item element
@@ -268,6 +269,7 @@ function clearSelection() {
     }
     selectedComboIndex = null;
     resetMapStyles();
+    highlightFilteredStates(); // Re-apply filter highlights if any
 
     document.getElementById('selected-info').classList.add('hidden');
 
@@ -275,20 +277,153 @@ function clearSelection() {
     map.fitBounds(statesLayer.getBounds());
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    // Search input
-    const searchInput = document.getElementById('state-search');
-    searchInput.addEventListener('input', (e) => {
-        searchFilter = e.target.value.toLowerCase();
+// Add state to filter
+function addStateFilter(stateName) {
+    if (!selectedStates.includes(stateName)) {
+        selectedStates.push(stateName);
+        renderFilterTags();
         renderCombinations();
+        highlightFilteredStates();
+    }
+    document.getElementById('state-search').value = '';
+    hideDropdown();
+}
+
+// Remove state from filter
+function removeStateFilter(stateName) {
+    selectedStates = selectedStates.filter(s => s !== stateName);
+    renderFilterTags();
+    renderCombinations();
+    highlightFilteredStates();
+}
+
+// Render filter tags
+function renderFilterTags() {
+    const container = document.getElementById('selected-filters');
+    container.innerHTML = '';
+    selectedStates.forEach(state => {
+        const tag = document.createElement('span');
+        tag.className = 'filter-tag';
+        tag.innerHTML = `${state}<button data-state="${state}">&times;</button>`;
+        tag.querySelector('button').addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeStateFilter(state);
+        });
+        container.appendChild(tag);
+    });
+}
+
+// Highlight filtered states on map
+function highlightFilteredStates() {
+    statesLayer.eachLayer(layer => {
+        const stateName = layer.feature.properties.name;
+        if (selectedStates.includes(stateName)) {
+            layer.setStyle({
+                fillColor: '#4cc9f0',
+                weight: 2,
+                color: '#4cc9f0',
+                fillOpacity: 0.4
+            });
+        } else if (selectedComboIndex === null) {
+            layer.setStyle(defaultStyle);
+        }
+    });
+}
+
+// Show dropdown with matching states
+function showDropdown(query) {
+    const dropdown = document.getElementById('search-dropdown');
+    const matches = allStateNames.filter(name =>
+        name.toLowerCase().includes(query.toLowerCase()) &&
+        !selectedStates.includes(name)
+    );
+
+    if (matches.length === 0 || query === '') {
+        hideDropdown();
+        return;
+    }
+
+    dropdown.innerHTML = '';
+    matches.slice(0, 8).forEach((name, idx) => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item' + (idx === highlightedIndex ? ' highlighted' : '');
+        item.textContent = name;
+        item.addEventListener('click', () => addStateFilter(name));
+        item.addEventListener('mouseenter', () => {
+            highlightedIndex = idx;
+            updateDropdownHighlight();
+        });
+        dropdown.appendChild(item);
     });
 
-    // Clear search
+    dropdown.classList.remove('hidden');
+}
+
+function hideDropdown() {
+    document.getElementById('search-dropdown').classList.add('hidden');
+    highlightedIndex = -1;
+}
+
+function updateDropdownHighlight() {
+    const items = document.querySelectorAll('.dropdown-item');
+    items.forEach((item, idx) => {
+        item.classList.toggle('highlighted', idx === highlightedIndex);
+    });
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    const searchInput = document.getElementById('state-search');
+    const dropdown = document.getElementById('search-dropdown');
+
+    // Typeahead search
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        highlightedIndex = -1;
+        showDropdown(query);
+    });
+
+    // Keyboard navigation
+    searchInput.addEventListener('keydown', (e) => {
+        const items = document.querySelectorAll('.dropdown-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+            updateDropdownHighlight();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, 0);
+            updateDropdownHighlight();
+        } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+            e.preventDefault();
+            const stateName = items[highlightedIndex].textContent;
+            addStateFilter(stateName);
+        } else if (e.key === 'Escape') {
+            hideDropdown();
+        }
+    });
+
+    // Hide dropdown on blur (with delay for click)
+    searchInput.addEventListener('blur', () => {
+        setTimeout(hideDropdown, 150);
+    });
+
+    // Show dropdown on focus if there's text
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim()) {
+            showDropdown(searchInput.value.trim());
+        }
+    });
+
+    // Clear all filters
     document.getElementById('clear-search').addEventListener('click', () => {
         searchInput.value = '';
-        searchFilter = '';
+        selectedStates = [];
+        renderFilterTags();
         renderCombinations();
+        highlightFilteredStates();
     });
 
     // Clear selection

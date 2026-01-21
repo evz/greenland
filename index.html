@@ -32,8 +32,12 @@
             </div>
 
             <div id="search-box">
-                <input type="text" id="state-search" placeholder="Search by state name...">
-                <button id="clear-search" title="Clear search">&times;</button>
+                <div id="selected-filters"></div>
+                <div id="search-input-wrapper">
+                    <input type="text" id="state-search" placeholder="Filter by state..." autocomplete="off">
+                    <div id="search-dropdown" class="hidden"></div>
+                </div>
+                <button id="clear-search" title="Clear filters">&times;</button>
             </div>
 
             <div id="selected-info" class="hidden">
