@@ -124,6 +124,28 @@ header .subtitle {
     display: none;
 }
 
+#filter-total {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(76, 201, 240, 0.1);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+#filter-total.hidden {
+    display: none;
+}
+
+#filter-total .total-area {
+    color: #4cc9f0;
+    font-weight: 600;
+}
+
+#filter-total .total-percent {
+    color: #64748b;
+}
+
 .filter-tag {
     display: flex;
     align-items: center;

@@ -8,6 +8,23 @@ let selectedStates = []; // Multi-select filter
 let allStateNames = []; // For typeahead
 let highlightedIndex = -1;
 
+// State areas in km² (US Census Bureau)
+const stateAreas = {
+  "Alabama": 135767, "Arizona": 295234, "Arkansas": 137732, "California": 423967,
+  "Colorado": 269601, "Connecticut": 14357, "Delaware": 6446, "Florida": 170312,
+  "Georgia": 153910, "Idaho": 216443, "Illinois": 149995, "Indiana": 94326,
+  "Iowa": 145746, "Kansas": 213100, "Kentucky": 104656, "Louisiana": 135659,
+  "Maine": 91633, "Maryland": 32131, "Massachusetts": 27336, "Michigan": 250487,
+  "Minnesota": 225163, "Mississippi": 125438, "Missouri": 180540, "Montana": 380831,
+  "Nebraska": 200330, "Nevada": 286380, "New Hampshire": 24214, "New Jersey": 22591,
+  "New Mexico": 314917, "New York": 141297, "North Carolina": 139391, "North Dakota": 183108,
+  "Ohio": 116098, "Oklahoma": 181037, "Oregon": 254799, "Pennsylvania": 119280,
+  "Rhode Island": 4001, "South Carolina": 82933, "South Dakota": 199729, "Tennessee": 109153,
+  "Texas": 695662, "Utah": 219882, "Vermont": 24906, "Virginia": 110787,
+  "Washington": 184661, "West Virginia": 62756, "Wisconsin": 169635, "Wyoming": 253335
+};
+const GREENLAND_AREA = 2166086;
+
 // State layer styles
 const defaultStyle = {
     fillColor: '#1a4670',
@@ -311,6 +328,27 @@ function renderFilterTags() {
         });
         container.appendChild(tag);
     });
+    updateFilterTotal();
+}
+
+// Update the running total of selected states' area
+function updateFilterTotal() {
+    const totalEl = document.getElementById('filter-total');
+    if (selectedStates.length === 0) {
+        totalEl.classList.add('hidden');
+        return;
+    }
+
+    const total = selectedStates.reduce((sum, state) => sum + (stateAreas[state] || 0), 0);
+    const percent = (total / GREENLAND_AREA * 100).toFixed(1);
+    const remaining = GREENLAND_AREA - total;
+
+    totalEl.classList.remove('hidden');
+    if (remaining > 0) {
+        totalEl.innerHTML = `<span class="total-area">${total.toLocaleString()} km&sup2;</span> selected <span class="total-percent">(${percent}% of Greenland, ${remaining.toLocaleString()} km&sup2; remaining)</span>`;
+    } else {
+        totalEl.innerHTML = `<span class="total-area">${total.toLocaleString()} km&sup2;</span> selected <span class="total-percent">(${percent}% of Greenland)</span>`;
+    }
 }
 
 // Highlight filtered states on map
